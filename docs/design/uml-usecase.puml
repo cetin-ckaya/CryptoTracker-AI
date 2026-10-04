@@ -1,0 +1,61 @@
+@startuml CryptoTracker-Kullanim-Senaryosu
+' ============================================================
+' CryptoTracker v2 — UML Kullanim Senaryosu (Use Case) Diyagrami
+' ============================================================
+
+' "dot" hatasi alirsan asagidaki satirin basindaki tirnagi kaldir.
+' !pragma layout smetana
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam nodesep 14
+skinparam ranksep 90
+skinparam shadowing false
+
+actor "Ücretsiz\nKullanıcı"   as FREE
+actor "Premium\nKullanıcı"    as PREM
+actor "Zamanlayıcı\n(Sistem)" as SCHED
+
+rectangle "CryptoTracker v2 — Backend" {
+  usecase "Kayıt ol"                as UC1
+  usecase "Giriş yap"               as UC2
+  usecase "Portföyü görüntüle"      as UC3
+  usecase "Varlık ekle / çıkar"     as UC4
+  usecase "İşlem kaydet"            as UC5
+  usecase "İşlem geçmişini listele" as UC6
+  usecase "Premium'a yükselt"       as UC7
+  usecase "Canlı fiyatları izle"    as UC9
+  usecase "AI portföy analizi al"   as UC8
+  usecase "Fiyatları güncelle"      as UC10
+  usecase "Portföy değerini kaydet" as UC11
+}
+
+rectangle "Dış Servisler" {
+  actor "CoinGecko API" as CG
+  actor "Groq AI API"   as AI
+}
+
+' Premium kullanici, ucretsiz kullanicinin tum yetkilerini devralir
+PREM -up-|> FREE
+
+FREE --> UC1
+FREE --> UC2
+FREE --> UC3
+FREE --> UC4
+FREE --> UC5
+FREE --> UC6
+FREE --> UC7
+FREE --> UC9
+PREM --> UC8
+
+SCHED --> UC10
+SCHED --> UC11
+
+UC3  ..> CG : <<include>>
+UC10 ..> CG : <<include>>
+UC11 ..> CG : <<include>>
+UC8  ..> AI : <<include>>
+UC10 .> UC9 : <<extend>>
+
+@enduml

@@ -1,0 +1,53 @@
+@startuml CryptoTracker-Kalitim-Diyagrami
+' ============================================================
+' CryptoTracker v2 — BaseEntity Kalitim Diyagrami
+'
+' Ana sinif diyagrami (uml-class.puml) iliskilere odaklandigi icin
+' 10 kalitim oku oraya cizilmedi; bu diyagram onlari gosterir.
+'
+' BaseEntity @MappedSuperclass'tir: kendisi tablo olmaz, alanlari
+' turetilen her entity'nin tablosuna sutun olarak eklenir.
+' ============================================================
+
+' "dot" hatasi alirsan asagidaki satirin basindaki tirnagi kaldir.
+' !pragma layout smetana
+
+skinparam classAttributeIconSize 0
+skinparam nodesep 18
+skinparam ranksep 60
+hide empty members
+
+abstract class BaseEntity <<MappedSuperclass>> {
+  - Long id
+  - LocalDateTime createdAt
+  - LocalDateTime updatedAt
+}
+
+class User
+class Coin
+class Portfolio
+class Holding
+class Transaction
+class Subscription
+class PriceHistory
+class PortfolioValueHistory
+class AiAnalysisLog
+class UserBehaviorEvent
+
+BaseEntity <|-- User
+BaseEntity <|-- Coin
+BaseEntity <|-- Portfolio
+BaseEntity <|-- Holding
+BaseEntity <|-- Transaction
+BaseEntity <|-- Subscription
+BaseEntity <|-- PriceHistory
+BaseEntity <|-- PortfolioValueHistory
+BaseEntity <|-- AiAnalysisLog
+BaseEntity <|-- UserBehaviorEvent
+
+note bottom of BaseEntity
+  JPA Auditing sayesinde createdAt kayıt oluşturulurken,
+  updatedAt her güncellemede otomatik doldurulur.
+end note
+
+@enduml

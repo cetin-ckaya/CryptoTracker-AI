@@ -1,0 +1,137 @@
+// ============================================================
+// CryptoTracker v2 — ER Diyagrami (dbdiagram.io kaynagi)
+//
+// Guncel semayi yansitir. Uygulanan migration'lar:
+//   V1__init.sql                               10 tablo
+//   V2__alter_user_behavior_events_metadata    metadata: jsonb -> text
+//   V3__add_indexes.sql                        7 indeks
+//   V4__seed_coins.sql                         sadece veri, sema degisikligi yok
+//
+// Kullanim: https://dbdiagram.io adresine yapistir, Export > PNG ile
+//           er-diagram.png dosyasini yeniden uret.
+//
+// NOT 1: created_at / updated_at sutunlari bilerek yazilmadi. Bu iki alan
+//        10 tablonun hepsinde var ve BaseEntity'den (@MappedSuperclass)
+//        devralinir; her tabloya tekrar yazmak diyagrami kalabaliklastirir.
+//        Hepsini gormek istersen her tablonun sonuna su iki satiri ekle:
+//          created_at timestamp
+//          updated_at timestamp
+//
+// NOT 2: NOT NULL isaretleri migration'lari baz alir, entity'leri degil.
+//        Bazi alanlar entity'de nullable = false ama veritabaninda nullable
+//        (transaction_date, started_at, price_history.price/recorded_at,
+//        portfolio_value_history.total_value/recorded_at). ER diyagrami
+//        veritabanini anlattigi icin burada NN yazilmadi.
+// ============================================================
+
+Project cryptotracker_v2 {
+  database_type: 'PostgreSQL'
+  Note: 'Tum tablolar BaseEntity uzerinden created_at ve updated_at alanlarini devralir.'
+}
+
+Table users {
+  id            bigint  [pk]
+  email         varchar [not null, unique]
+  password_hash varchar [not null]
+  full_name     varchar
+}
+
+Table coins {
+  id                     bigint  [pk]
+  symbol                 varchar [not null]
+  name                   varchar [not null]
+  coingecko_id           varchar
+  icon_url               varchar
+  is_free_tier_watchlist boolean [default: false]
+
+  indexes {
+    symbol [name: 'idx_coins_symbol']
+  }
+}
+
+Table subscriptions {
+  id         bigint    [pk]
+  user_id    bigint    [not null, unique, ref: - users.id]
+  tier       varchar   [not null, note: 'FREE | PREMIUM']
+  started_at timestamp
+  expires_at timestamp
+}
+
+Table portfolios {
+  id      bigint [pk]
+  user_id bigint [not null, unique, ref: - users.id]
+}
+
+Table holdings {
+  id                bigint  [pk]
+  portfolio_id      bigint  [not null, ref: > portfolios.id]
+  coin_id           bigint  [not null, ref: > coins.id]
+  quantity          decimal [note: 'numeric(20,8)']
+  average_buy_price decimal [note: 'numeric(20,8)']
+
+  indexes {
+    portfolio_id [name: 'idx_holdings_portfolio_id']
+  }
+}
+
+Table transactions {
+  id               bigint    [pk]
+  portfolio_id     bigint    [not null, ref: > portfolios.id]
+  coin_id          bigint    [not null, ref: > coins.id]
+  type             varchar   [not null, note: 'BUY | SELL']
+  quantity         decimal   [not null]
+  price_per_unit   decimal   [not null]
+  total_amount     decimal   [not null]
+  transaction_date timestamp
+
+  indexes {
+    portfolio_id [name: 'idx_transactions_portfolio_id']
+  }
+}
+
+Table price_history {
+  id          bigint    [pk]
+  coin_id     bigint    [not null, ref: > coins.id]
+  price       decimal   [note: 'numeric(20,8)']
+  recorded_at timestamp
+
+  indexes {
+    coin_id [name: 'idx_price_history_coin_id']
+  }
+}
+
+Table portfolio_value_history {
+  id           bigint    [pk]
+  portfolio_id bigint    [not null, ref: > portfolios.id]
+  total_value  decimal   [note: 'numeric(20,2)']
+  recorded_at  timestamp
+
+  indexes {
+    portfolio_id [name: 'idx_portfolio_value_history_portfolio_id']
+  }
+}
+
+Table ai_analysis_logs {
+  id             bigint  [pk]
+  user_id        bigint  [not null, ref: > users.id]
+  coin_id        bigint  [ref: > coins.id, note: 'nullable — genel analizde bos']
+  analysis_type  varchar [not null]
+  recommendation varchar
+  trend_outlook  varchar
+  content        text
+
+  indexes {
+    user_id [name: 'idx_ai_analysis_logs_user_id']
+  }
+}
+
+Table user_behavior_events {
+  id         bigint  [pk]
+  user_id    bigint  [not null, ref: > users.id]
+  event_type varchar [not null]
+  metadata   text    [note: 'V2 migration ile jsonb -> text']
+
+  indexes {
+    user_id [name: 'idx_user_behavior_events_user_id']
+  }
+}

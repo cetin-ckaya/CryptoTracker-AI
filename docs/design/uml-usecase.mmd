@@ -1,0 +1,55 @@
+%% CryptoTracker v2 — UML Kullanim Senaryosu (Use Case) Diyagrami
+%% Mermaid'de yerlesik use-case tipi yoktur; standart gosterime en yakin
+%% bicim olan flowchart ile aktor-senaryo iliskisi cizilmistir.
+flowchart LR
+    %% ---------- Aktorler ----------
+    FREE(["👤 Ücretsiz Kullanıcı"])
+    PREM(["👤 Premium Kullanıcı"])
+    SCHED(["⚙️ Zamanlayıcı<br/>(Sistem)"])
+    CG(["🌐 CoinGecko API"])
+    AI(["🌐 Groq AI API"])
+
+    subgraph SYS["CryptoTracker v2 — Backend"]
+        direction TB
+        UC1(["Kayıt ol"])
+        UC2(["Giriş yap"])
+        UC3(["Portföyü görüntüle"])
+        UC4(["Varlık ekle / çıkar"])
+        UC5(["İşlem kaydet"])
+        UC6(["İşlem geçmişini listele"])
+        UC7(["Premium'a yükselt"])
+        UC8(["AI portföy analizi al"])
+        UC9(["Canlı fiyatları izle"])
+        UC10(["Fiyatları güncelle"])
+        UC11(["Portföy değerini kaydet"])
+    end
+
+    FREE --- UC1
+    FREE --- UC2
+    FREE --- UC3
+    FREE --- UC4
+    FREE --- UC5
+    FREE --- UC6
+    FREE --- UC7
+    FREE --- UC9
+
+    PREM --- UC3
+    PREM --- UC4
+    PREM --- UC5
+    PREM --- UC6
+    PREM --- UC8
+    PREM --- UC9
+
+    SCHED --- UC10
+    SCHED --- UC11
+
+    UC3 -. "«include»" .-> CG
+    UC10 -. "«include»" .-> CG
+    UC11 -. "«include»" .-> CG
+    UC8 -. "«include»" .-> AI
+    UC10 -. "«extend»" .-> UC9
+
+    classDef actor fill:#eef2ff,stroke:#4f46e5,stroke-width:1.5px,color:#1e1b4b
+    classDef uc fill:#ffffff,stroke:#64748b,stroke-width:1.2px,color:#0f172a
+    class FREE,PREM,SCHED,CG,AI actor
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11 uc

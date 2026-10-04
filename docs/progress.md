@@ -6,8 +6,8 @@ Bu dosya, aktif olarak neredeyiz sorusuna hızlı cevap vermek için oturum sonl
 ## Durum Özeti (2026-08-26)
 
 **Faz:** Phase 1 — Monolitik Backend Geliştirme
-**Sprint:** Sprint 9 — Event-Driven & Guvenlik (Gun 70-76) ✅ TAMAMLANDI
-**Şu an:** Sprint 10 başlangıcı
+**Sprint:** Sprint 10 — Performans & Final (Gun 77-80) ✅ TAMAMLANDI
+**Şu an:** Phase 1 tamamlandi — Phase 3 React Frontend basliyor
 
 ### Tamamlanan
 - [x] Gün 1-3 (Phase 0): requirements.md, decisions.md, ER diyagramı, repo + ilk commit
@@ -35,8 +35,11 @@ Bu dosya, aktif olarak neredeyiz sorusuna hızlı cevap vermek için oturum sonl
 - [x] Gun 70-73: RabbitMQ entegrasyonu — docker-compose rabbitmq servisi, RabbitMQConfig, PriceUpdateMessage, PriceMessageConsumer, MarketScheduler RabbitTemplate ile guncellendi
 - [x] Gun 74-76: Guvenlik — CORS (localhost:3000), Security Headers (X-Frame-Options, X-Content-Type-Options, HSTS), SecurityConfig duzeltildi
 
+- [x] Gun 77-78: Performans — V3__add_indexes.sql (7 index), TransactionRepository @EntityGraph ile N+1 cozumu
+- [x] Gun 79-80: Load Testing (JMeter: 50 kullanici, 250 istek, 0 hata, ort. 36ms), bilingual README (EN/TR)
+
 ### Sıradaki adım
-Sprint 10 — Performans & Final (Gun 77-80)
+Sprint 11 — Phase 3: React Frontend (Gun 81+)
 
 ### Gelecek Sprint'ler (Plan Ozeti)
 

@@ -1,0 +1,92 @@
+@startuml CryptoTracker-Sira-Diyagrami
+' ============================================================
+' CryptoTracker v2 — UML Sira (Sequence) Diyagrami
+' Senaryo: GET /api/v1/portfolio
+'          JWT dogrulama -> davranis kaydi -> JOIN FETCH ->
+'          Redis cache -> CoinGecko -> gunluk kar/zarar
+'
+' Kullanim: https://www.planttext.com adresine yapistir -> PNG / SVG
+'           veya IntelliJ'de PlantUML Integration eklentisiyle ac.
+' NOT: Sira diyagramlari Graphviz gerektirmez, her zaman calisir.
+' ============================================================
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 220
+
+actor       "Kullanıcı"               as K
+participant "JwtAuthenticationFilter" as F
+participant "PortfolioController"     as C
+participant "BehaviorTrackingService" as B
+participant "PortfolioService"        as S
+database    "PortfolioRepository"     as R
+participant "CoinGeckoService"        as G
+database    "Redis (cache)"           as RD
+participant "CoinGecko API"           as API
+
+K -> F : GET /api/v1/portfolio\nAuthorization: Bearer <token>
+activate F
+
+alt Token geçersiz / yok
+  F --> K : 403 Forbidden
+else Token geçerli
+  F -> F : Token doğrula,\ne-posta + rol oku
+  F -> C : SecurityContext dolu istek
+  deactivate F
+  activate C
+
+  C -> B : track(email, "GET_PORTFOLIO")
+  activate B
+  B --> C : kaydedildi
+  deactivate B
+
+  C -> S : getPortfolio(userId)
+  activate S
+
+  S -> R : findByUserIdWithHoldings(userId)
+  activate R
+  note right of R
+    LEFT JOIN FETCH —
+    holdings tek sorguda gelir
+  end note
+  R --> S : Portfolio + Holdings
+  deactivate R
+
+  loop Her holding için
+    S -> G : getPrice(symbol)
+    activate G
+    G -> RD : prices::SYMBOL var mı?
+    activate RD
+
+    alt Cache HIT
+      RD --> G : fiyat
+    else Cache MISS
+      RD --> G : boş
+      G -> API : GET /simple/price?ids=...&vs_currencies=usd
+      activate API
+      API --> G : {"bitcoin":{"usd":78549}}
+      deactivate API
+      G -> RD : prices::SYMBOL yaz
+    end
+    deactivate RD
+
+    G --> S : BigDecimal fiyat
+    deactivate G
+  end
+
+  S -> S : totalValue, totalInvested,\ntotalProfitLoss hesapla
+
+  S -> R : 24 saat önceki snapshot
+  activate R
+  R --> S : PortfolioValueHistory (varsa)
+  deactivate R
+
+  S -> S : dailyProfitLoss hesapla
+  S --> C : PortfolioResponse
+  deactivate S
+
+  C --> K : 200 OK + JSON
+  deactivate C
+end
+
+@enduml

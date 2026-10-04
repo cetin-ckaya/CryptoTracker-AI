@@ -1,0 +1,55 @@
+%% CryptoTracker v2 — UML Sira (Sequence) Diyagrami
+%% Senaryo: GET /api/v1/portfolio — JWT dogrulama, Redis cache, CoinGecko
+sequenceDiagram
+    autonumber
+    actor K as Kullanıcı
+    participant F as JwtAuthenticationFilter
+    participant C as PortfolioController
+    participant B as BehaviorTrackingService
+    participant S as PortfolioService
+    participant R as PortfolioRepository
+    participant G as CoinGeckoService
+    participant RD as Redis (cache)
+    participant API as CoinGecko API
+
+    K->>F: GET /api/v1/portfolio<br/>Authorization: Bearer <token>
+    activate F
+    alt Token gecersiz / yok
+        F-->>K: 403 Forbidden
+    else Token gecerli
+        F->>F: Token dogrula, email + rol oku
+        F->>C: SecurityContext dolu istek
+        deactivate F
+        activate C
+        C->>B: track(email, "GET_PORTFOLIO")
+        B-->>C: kaydedildi
+        C->>S: getPortfolio(userId)
+        activate S
+        S->>R: findByUserIdWithHoldings(userId)
+        Note right of R: LEFT JOIN FETCH —<br/>holdings tek sorguda gelir
+        R-->>S: Portfolio + Holdings
+
+        loop Her holding icin
+            S->>G: getPrice(symbol)
+            activate G
+            G->>RD: prices::SYMBOL var mı?
+            alt Cache HIT
+                RD-->>G: fiyat
+            else Cache MISS
+                G->>API: GET /simple/price?ids=...&vs_currencies=usd
+                API-->>G: {"bitcoin":{"usd":78549}}
+                G->>RD: prices::SYMBOL yaz
+            end
+            G-->>S: BigDecimal fiyat
+            deactivate G
+        end
+
+        S->>S: totalValue, totalInvested,<br/>totalProfitLoss hesapla
+        S->>R: 24 saat onceki snapshot
+        R-->>S: PortfolioValueHistory (varsa)
+        S->>S: dailyProfitLoss hesapla
+        S-->>C: PortfolioResponse
+        deactivate S
+        C-->>K: 200 OK + JSON
+        deactivate C
+    end

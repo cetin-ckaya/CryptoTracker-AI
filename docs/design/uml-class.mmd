@@ -1,0 +1,123 @@
+%% CryptoTracker v2 — UML Sinif Diyagrami (Domain Modeli)
+%% Kaynak: backend/src/main/java/com/cryptotracker/backend/domain/model/
+classDiagram
+    direction TB
+
+    class BaseEntity {
+        <<abstract>>
+        -Long id
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+    }
+
+    class User {
+        -String email
+        -String passwordHash
+        -String fullName
+    }
+
+    class Coin {
+        -String symbol
+        -String name
+        -String coingeckoId
+        -String iconUrl
+        -Boolean isFreeTierWatchlist
+    }
+
+    class Portfolio {
+        -User user
+        -List~Holding~ holdings
+    }
+
+    class Holding {
+        -Portfolio portfolio
+        -Coin coin
+        -BigDecimal quantity
+        -BigDecimal averageBuyPrice
+    }
+
+    class Transaction {
+        -Portfolio portfolio
+        -Coin coin
+        -TransactionType type
+        -BigDecimal quantity
+        -BigDecimal pricePerUnit
+        -BigDecimal totalAmount
+        -LocalDateTime transactionDate
+    }
+
+    class Subscription {
+        -User user
+        -SubscriptionTier tier
+        -LocalDateTime startedAt
+        -LocalDateTime expiresAt
+    }
+
+    class PriceHistory {
+        -Coin coin
+        -BigDecimal price
+        -LocalDateTime recordedAt
+    }
+
+    class PortfolioValueHistory {
+        -Portfolio portfolio
+        -BigDecimal totalValue
+        -LocalDateTime recordedAt
+    }
+
+    class AiAnalysisLog {
+        -User user
+        -Coin coin
+        -String analysisType
+        -String recommendation
+        -String trendOutlook
+        -String content
+    }
+
+    class UserBehaviorEvent {
+        -User user
+        -String eventType
+        -String metadata
+    }
+
+    class TransactionType {
+        <<enumeration>>
+        BUY
+        SELL
+    }
+
+    class SubscriptionTier {
+        <<enumeration>>
+        FREE
+        PREMIUM
+    }
+
+    %% --- Kalitim: tum entity'ler BaseEntity'den turer ---
+    BaseEntity <|-- User
+    BaseEntity <|-- Coin
+    BaseEntity <|-- Portfolio
+    BaseEntity <|-- Holding
+    BaseEntity <|-- Transaction
+    BaseEntity <|-- Subscription
+    BaseEntity <|-- PriceHistory
+    BaseEntity <|-- PortfolioValueHistory
+    BaseEntity <|-- AiAnalysisLog
+    BaseEntity <|-- UserBehaviorEvent
+
+    %% --- Iliskiler ---
+    User "1" -- "1" Portfolio : sahiptir
+    User "1" -- "1" Subscription : sahiptir
+    User "1" -- "0..*" AiAnalysisLog : uretir
+    User "1" -- "0..*" UserBehaviorEvent : uretir
+
+    Portfolio "1" *-- "0..*" Holding : icerir
+    Portfolio "1" -- "0..*" Transaction : kaydeder
+    Portfolio "1" -- "0..*" PortfolioValueHistory : gecmis
+
+    Coin "1" -- "0..*" Holding : konu
+    Coin "1" -- "0..*" Transaction : konu
+    Coin "1" -- "0..*" PriceHistory : fiyat
+    Coin "0..1" -- "0..*" AiAnalysisLog : analiz
+
+    Transaction ..> TransactionType : kullanir
+    Subscription ..> SubscriptionTier : kullanir

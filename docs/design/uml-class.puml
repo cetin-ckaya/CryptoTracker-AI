@@ -1,0 +1,128 @@
+@startuml CryptoTracker-Sinif-Diyagrami
+' ============================================================
+' CryptoTracker v2 — UML Sinif Diyagrami (Domain Modeli)
+' Kaynak: backend/src/main/java/com/cryptotracker/backend/domain/model/
+'
+' Siniflar islevlerine gore 3 pakete ayrildi. BaseEntity kalitimi
+' okunabilirlik icin ayri bir diyagrama tasindi:
+' uml-class-inheritance.puml
+'
+' Kullanim: https://www.planttext.com adresine yapistir -> PNG / SVG
+'           veya IntelliJ'de PlantUML Integration eklentisiyle ac.
+' ============================================================
+
+' "dot" hatasi alirsan asagidaki satirin basindaki tirnagi kaldir.
+' !pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam linetype polyline
+skinparam nodesep 40
+skinparam ranksep 70
+skinparam packageStyle rectangle
+hide empty members
+top to bottom direction
+
+abstract class BaseEntity {
+  - Long id
+  - LocalDateTime createdAt
+  - LocalDateTime updatedAt
+}
+
+note right of BaseEntity
+  Tüm entity sınıfları BaseEntity'den türer;
+  id, createdAt ve updatedAt alanlarını
+  ondan devralır. Kalıtım okları
+  okunabilirlik için ayrı diyagramda.
+end note
+
+package "Kullanıcı ve Üyelik" <<Rectangle>> {
+  class User {
+    - String email
+    - String passwordHash
+    - String fullName
+  }
+  class Subscription {
+    - User user
+    - SubscriptionTier tier
+    - LocalDateTime startedAt
+    - LocalDateTime expiresAt
+  }
+  enum SubscriptionTier {
+    FREE
+    PREMIUM
+  }
+  class AiAnalysisLog {
+    - User user
+    - Coin coin
+    - String analysisType
+    - String recommendation
+    - String trendOutlook
+    - String content
+  }
+  class UserBehaviorEvent {
+    - User user
+    - String eventType
+    - String metadata
+  }
+}
+
+package "Portföy" <<Rectangle>> {
+  class Portfolio {
+    - User user
+    - List<Holding> holdings
+  }
+  class Holding {
+    - Portfolio portfolio
+    - Coin coin
+    - BigDecimal quantity
+    - BigDecimal averageBuyPrice
+  }
+  class Transaction {
+    - Portfolio portfolio
+    - Coin coin
+    - TransactionType type
+    - BigDecimal quantity
+    - BigDecimal pricePerUnit
+    - BigDecimal totalAmount
+    - LocalDateTime transactionDate
+  }
+  enum TransactionType {
+    BUY
+    SELL
+  }
+  class PortfolioValueHistory {
+    - Portfolio portfolio
+    - BigDecimal totalValue
+    - LocalDateTime recordedAt
+  }
+}
+
+package "Piyasa" <<Rectangle>> {
+  class Coin {
+    - String symbol
+    - String name
+    - String coingeckoId
+    - String iconUrl
+    - Boolean isFreeTierWatchlist
+  }
+  class PriceHistory {
+    - Coin coin
+    - BigDecimal price
+    - LocalDateTime recordedAt
+  }
+}
+
+
+User "1" -- "1" Portfolio : sahiptir >
+User "1" -- "1" Subscription : sahiptir >
+User "1" -- "0..*" AiAnalysisLog : talep eder >
+User "1" -- "0..*" UserBehaviorEvent : üretir >
+Portfolio "1" *-- "0..*" Holding : içerir >
+Portfolio "1" -- "0..*" Transaction : kaydeder >
+Portfolio "1" -- "0..*" PortfolioValueHistory : geçmişi >
+Coin "1" -- "0..*" Holding : konusu >
+Coin "1" -- "0..*" Transaction : konusu >
+Coin "1" -- "0..*" PriceHistory : fiyatı >
+Coin "0..1" -- "0..*" AiAnalysisLog : analizi >
+Transaction ..> TransactionType
+Subscription ..> SubscriptionTier
+@enduml
