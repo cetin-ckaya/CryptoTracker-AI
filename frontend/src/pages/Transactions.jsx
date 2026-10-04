@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Plus } from 'lucide-react'
 import api from '../api/axios'
 import Coin from '../components/Coin'
+import AddTransactionModal from '../components/AddTransactionModal'
 import { money, amount } from '../utils/format'
 import './Pages.css'
 
@@ -28,6 +29,7 @@ function fmtDate(iso) {
 }
 
 export default function Transactions() {
+  const [addOpen, setAddOpen] = useState(false)
   const [range, setRange] = useState('30')
   const [coinFilter, setCoinFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -59,10 +61,17 @@ export default function Transactions() {
 
   return (
     <div className="page">
+      <AddTransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
+
       <div className="page-head">
         <div>
           <h1>İşlemlerim</h1>
           <div className="sub">Tüm alım ve satım işlemlerinizin listesi</div>
+        </div>
+        <div className="head-actions">
+          <button className="btn-solid" onClick={() => setAddOpen(true)}>
+            <Plus size={15} /> İşlem Ekle
+          </button>
         </div>
       </div>
 

@@ -26,7 +26,7 @@ export default function Login() {
     setError('')
     try {
       const res = await api.post('/auth/login', { email, password })
-      login(res.data.token, { email }, remember)
+      login(res.data.token, { email: res.data.email ?? email, fullName: res.data.fullName }, remember)
       navigate('/')
     } catch (err) {
       setError(err?.response?.status === 401 || err?.response?.status === 404

@@ -1,51 +1,18 @@
+/* Topbar ve durum cubugu tam genislikte oldugu icin sidebar ikisinin
+   arasinda kalir: ustten topbar, alttan statusbar kadar iceride. */
 .sidebar {
   position: fixed;
   left: 0;
-  top: 0;
-  bottom: 0;
-  width: 248px;
+  top: var(--topbar-h);
+  bottom: var(--statusbar-h);
+  width: var(--sidebar-w);
   background: #0f1220;
   border-right: 1px solid #1d2233;
   display: flex;
   flex-direction: column;
-  padding: 18px 0 16px;
+  padding: 16px 0;
   z-index: 100;
-}
-
-/* ---------- Logo ---------- */
-.sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 0 18px 20px;
-  border-bottom: 1px solid #1d2233;
-  margin-bottom: 14px;
-}
-
-.sidebar-logo-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(145deg, #16304a, #10233a);
-  border: 1px solid #1d3a55;
-  border-radius: 11px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.sidebar-logo-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #f1f5f9;
-  letter-spacing: -0.2px;
-}
-
-.sidebar-logo-title span { color: #7d87a4; font-weight: 600; }
-
-.sidebar-logo-sub {
-  font-size: 10.5px;
-  color: #626d88;
-  margin-top: 3px;
+  overflow-y: auto;
 }
 
 /* ---------- Nav ---------- */
@@ -133,3 +100,20 @@
 .status-title { font-size: 12px; font-weight: 600; color: #eef2f8; }
 .status-sub   { font-size: 11px; color: #8b95b0; margin-top: 3px; }
 .status-time  { font-size: 10px; color: #626d88; margin-top: 3px; }
+
+/* "API Durumu" satirindaki yesil durum noktasi — ikonla ayni genislikte
+   yer kaplar ki yazilar diger satirlarla hizali kalsin. */
+.sidebar-dot {
+  width: 17px;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 7px rgba(52, 211, 153, 0.7);
+}

@@ -1,20 +1,20 @@
-.layout {
-  display: flex;
-  min-height: 100vh;
-  background: #0b0e1a;
+/* Olculer tek yerden yonetilsin diye degisken: sidebar genisligi hem
+   layout padding'inde hem topbar'daki logo blogunda kullaniliyor. */
+:root {
+  --sidebar-w: 248px;
+  --topbar-h: 62px;
+  --statusbar-h: 36px;
 }
 
-.layout-main {
-  flex: 1;
-  margin-left: 248px;
-  display: flex;
-  flex-direction: column;
+.layout {
   min-height: 100vh;
-  min-width: 0;
+  background: #0b0e1a;
+  padding-top: var(--topbar-h);
+  padding-left: var(--sidebar-w);
+  padding-bottom: var(--statusbar-h);
 }
 
 .layout-content {
-  flex: 1;
   padding: 22px 24px;
   min-width: 0;
 }

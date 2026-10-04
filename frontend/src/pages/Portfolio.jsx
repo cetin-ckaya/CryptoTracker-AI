@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, Plus, MoreHorizontal } from 'lucide-react'
 import api from '../api/axios'
 import Coin from '../components/Coin'
+import AddTransactionModal from '../components/AddTransactionModal'
 import useLivePrices from '../hooks/useLivePrices'
 import { money, money0, amount } from '../utils/format'
 import './Pages.css'
@@ -16,6 +17,7 @@ const qty = amount
 
 export default function Portfolio() {
   const [open, setOpen] = useState({})
+  const [addOpen, setAddOpen] = useState(false)
   const [sortByValue, setSortByValue] = useState(true)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -32,16 +34,35 @@ export default function Portfolio() {
     queryFn: () => api.get('/transactions').then(r => r.data),
   })
 
+  // Piyasa fiyatlari — WebSocket 5 dakikada bir yayin yaptigi icin sayfa
+  // acilisinda fiyatlar bos kalmasin diye bu uctan da cekiyoruz.
+  // Dashboard ile ayni anahtari paylasir, ikinci bir istek atilmaz.
+  const { data: market = [] } = useQuery({
+    queryKey: ['market'],
+    queryFn: () => api.get('/market').then(r => r.data),
+    refetchInterval: 5 * 60 * 1000,
+  })
+
   const holdings = portfolio?.holdings ?? []
 
   // Her holding icin: maliyet her zaman hesaplanabilir (miktar x ort. alis),
   // guncel deger ise ancak WebSocket'ten o coinin fiyati geldiyse bilinir.
+  const marketBySymbol = Object.fromEntries(
+    market.map(m => [String(m.symbol).toUpperCase(), m])
+  )
+
   const rows = holdings.map(h => {
     const sym = h.coinSymbol
+    const key = String(sym ?? '').toUpperCase()
     const quantity = num(h.quantity)
     const avg = num(h.averageBuyPrice)
     const cost = quantity * avg
-    const price = live[sym?.toUpperCase()]?.price ?? null
+
+    // Fiyat onceligi: WebSocket (en taze) > /market ucu > backend holding alani
+    const m = marketBySymbol[key]
+    const price = live[key]?.price
+      ?? (m ? num(m.price) : (h.currentPrice != null ? num(h.currentPrice) : null))
+    const change24h = m ? num(m.change24h) : null
     const value = price != null ? quantity * price : null
     const coinTx = transactions.filter(t => t.coinSymbol === sym)
     const firstBuy = coinTx.length
@@ -51,7 +72,7 @@ export default function Portfolio() {
       id: h.id ?? sym,
       sym,
       name: h.coinName ?? sym,
-      quantity, avg, cost, price, value,
+      quantity, avg, cost, price, value, change24h,
       pnl: value != null ? value - cost : null,
       pnlPct: value != null && cost > 0 ? ((value - cost) / cost) * 100 : null,
       txCount: coinTx.length,
@@ -77,6 +98,7 @@ export default function Portfolio() {
 
   return (
     <div className="page">
+      <AddTransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
       <div className="page-head">
         <div>
           <h1>Portföyüm</h1>
@@ -90,8 +112,8 @@ export default function Portfolio() {
           >
             <RefreshCw size={15} /> {isFetching ? 'Yenileniyor' : 'Yenile'}
           </button>
-          <button className="btn-solid" onClick={() => navigate('/transactions')}>
-            <Plus size={15} /> Varlık Ekle
+          <button className="btn-solid" onClick={() => setAddOpen(true)}>
+            <Plus size={15} /> İşlem Ekle
           </button>
         </div>
       </div>
@@ -171,7 +193,14 @@ export default function Portfolio() {
                     <div><div className="k">Ort. Alış Fiyatı</div><div className="v">{tl(r.avg)}</div></div>
                     <div>
                       <div className="k">Güncel Fiyat</div>
-                      <div className="v">{r.price != null ? tl(r.price) : '—'}</div>
+                      <div className="v">
+                        {r.price != null ? tl(r.price) : '—'}
+                        {r.change24h != null && (
+                          <span className={`chg ${r.change24h >= 0 ? 'green' : 'red'}`}>
+                            {pct(r.change24h)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <div className="k">İlk Alım</div>

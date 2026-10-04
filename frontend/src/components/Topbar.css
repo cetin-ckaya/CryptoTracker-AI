@@ -1,77 +1,57 @@
 .topbar {
-  height: 62px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: var(--topbar-h);
   background: #0f1220;
   border-bottom: 1px solid #1d2233;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 24px 0 0;
+}
+
+/* ---------- Logo ---------- */
+/* Sidebar ile ayni genislikte olmasi sart: altindaki menu sutunuyla
+   sol kenarlari hizali gorunsun diye. */
+.topbar-logo {
+  width: var(--sidebar-w);
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 18px;
+  border-right: 1px solid #1d2233;
+}
+
+.topbar-logo-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
 }
 
-.topbar-prices {
-  display: flex;
-  align-items: center;
+.topbar-logo-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
 }
 
-.price-chip {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 24px;
-  border-right: 1px solid #1e2235;
+
+.topbar-logo-sub {
+  font-size: 10.5px;
+  color: #626d88;
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
-.price-chip:first-child {
-  padding-left: 0;
-}
-
-.price-chip:last-child {
-  border-right: none;
-}
-
-.price-coin-svg {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.price-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.price-symbol {
-  font-size: 11px;
-  color: #6b7394;
-  font-weight: 400;
-  line-height: 1;
-}
-
-.price-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  line-height: 1;
-}
-
-.price-value {
-  font-size: 14px;
-  font-weight: 500;
-  color: #e2e8f0;
-  letter-spacing: 0;
-}
-
-.price-change {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.price-change.pos  { color: #34d399; }
-.price-change.neg  { color: #f87171; }
-.price-change.wait { color: #626d88; font-size: 11px; }
+.topbar-spacer { flex: 1; }
 
 /* User section */
 .topbar-user {
@@ -132,6 +112,9 @@
 
 .user-tier {
   font-size: 11px;
-  color: #a394ff;
   font-weight: 400;
+  min-height: 14px;   /* plan yuklenirken satir zipla masin */
 }
+
+.user-tier.premium { color: #a394ff; }
+.user-tier.free    { color: #7d87a4; }

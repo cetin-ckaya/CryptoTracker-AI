@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
 import {
-  DollarSign, TrendingUp, TrendingDown, Wallet, Layers, Plus, ChevronDown,
+  DollarSign, TrendingUp, TrendingDown, Wallet, Layers, Plus,
   Info, ChevronRight, FileText, Loader2,
 } from 'lucide-react'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
-import useLivePrices, { changePct } from '../hooks/useLivePrices'
+import useLivePrices from '../hooks/useLivePrices'
 import Coin from '../components/Coin'
+import AddTransactionModal from '../components/AddTransactionModal'
 import { money, money0, moneyShort, percent } from '../utils/format'
 import './Dashboard.css'
 
@@ -26,81 +28,82 @@ const pctStr = percent
 // Dagilim halkasi renkleri
 const SLICE = ['#F7931A', '#7b6cf0', '#34d399', '#6c5ce7', '#8fb3ff', '#f0b429', '#f87171', '#22d3ee']
 
-// 00:00 -> 24:00 arasi 15 dk araliklarla portfoy degeri egrisi.
-// Egri guncel portfoy degerinde biter, gun basinda %8 asagidan baslar.
-function makeSeries(end) {
-  if (!end) return []
-  const start = end * 0.92
-  const out = []
-  for (let i = 0; i <= 96; i++) {
-    const trend = start + (end - start) * (i / 96)
-    const noise = Math.sin(i / 7.3) * end * 0.012 + Math.sin(i / 3.1) * end * 0.007 + Math.sin(i / 1.27) * end * 0.003
-    const hh = String(Math.floor(i / 4)).padStart(2, '0')
-    const mm = String((i % 4) * 15).padStart(2, '0')
-    out.push({ t: `${hh}:${mm}`, v: Math.round(i === 96 ? end : trend + noise) })
-  }
-  return out
-}
-
 function Spark({ data, color }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data.map((v, i) => ({ i, v }))}>
+      <LineChart data={data.map((v, i) => ({ i, v }))}
+        margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
+        {/* YAxis yazilmazsa recharts varsayilan olarak 0'dan baslayan bir
+            alan kuruyor; 84.000-85.000 arasi gezinen fiyat o olcekte duz
+            bir cizgi gibi gorunuyordu. domain'i veriye daraltinca
+            7 gunluk hareket gercekten gorunur hale geliyor. */}
+        <YAxis hide domain={['dataMin', 'dataMax']} />
         <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.6} dot={false} />
       </LineChart>
     </ResponsiveContainer>
   )
 }
 
-/* AI metninden "BTC: AL" / "ETH - TUT" gibi sinyalleri ayikla */
-function parseSignals(text) {
-  if (!text) return []
-  const out = []
-  const re = /\b([A-Z]{2,6})\b\s*[:\-–—]\s*(AL|SAT|TUT)\b/g
-  let m
-  while ((m = re.exec(text.toUpperCase())) !== null) {
-    if (!out.some(s => s.sym === m[1])) out.push({ sym: m[1], action: m[2] })
-  }
-  return out.slice(0, 4)
-}
+// "Canli Fiyatlar" panelinde gosterilecek sabit liste ve sirasi.
+// Katalogda 100 coin var ama bu panel bir izleme listesi; hepsini
+// listelemek paneli kullanilmaz hale getirirdi.
+const LIVE_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP']
 
-/* AI metnini madde listesine cevir — markdown isaretlerini ve baslik
-   satirlarini ayikla, sadece anlamli cumleleri birak */
-function toBullets(text) {
-  if (!text) return []
-  return text
-    .split('\n')
-    .map(l => l
-      .replace(/\*\*/g, '')          // kalin isaretleri
-      .replace(/^[\s*\-•>#\d.]+/, '') // satir basi madde/numara isaretleri
-      .replace(/\|/g, ' ')            // tablo cizgileri
-      .trim())
-    .filter(l =>
-      l.length > 30 &&                // cok kisa satir = baslik
-      !l.endsWith(':') &&             // "Guclu Yonleri:" gibi basliklar
-      /[.!?]$|[a-zçğıöşü]$/i.test(l)) // cumle gibi bitenler
-    .slice(0, 4)
-}
+// Portfoy deger grafigindeki aralik butonlari
+const RANGES = ['1G', '1H', '1A', '3A', '1Y', 'Tümü']
 
 export default function Dashboard() {
-  const [portfolio, setPortfolio] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [ai, setAi] = useState({ state: 'loading', text: '' })
+  const [addOpen, setAddOpen] = useState(false)
+  const [range, setRange] = useState('1G')
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { firstName } = useAuth()
   const { prices: live, connected } = useLivePrices()
-  const firstName = (user?.email?.split('@')[0] ?? 'Kullanıcı').replace(/^./, c => c.toUpperCase())
 
-  useEffect(() => {
-    api.get('/portfolio')
-      .then(r => setPortfolio(r.data))
-      .catch(() => setPortfolio(null))
-      .finally(() => setLoading(false))
+  // react-query ile cekiyoruz ki islem eklendiginde modal'in gonderdigi
+  // invalidateQueries(['portfolio']) sinyali buraya da ulassin ve
+  // sayfa yenilenmeden kartlar guncellensin.
+  const { data: portfolio, isLoading: loading } = useQuery({
+    queryKey: ['portfolio'],
+    queryFn: () => api.get('/portfolio').then(r => r.data),
+  })
 
-    api.get('/ai/analyze')
-      .then(r => setAi({ state: 'ok', text: typeof r.data === 'string' ? r.data : JSON.stringify(r.data) }))
-      .catch(err => setAi({ state: err?.response?.status === 403 ? 'locked' : 'error', text: '' }))
-  }, [])
+  // Canli fiyatlar paneli: takip edilen coinlerin fiyati, 24 saatlik degisimi
+  // ve sparkline'i. WebSocket 5 dakikada bir yayin yaptigi icin sayfa acilisinda
+  // ekranin bos kalmamasi adina once bu uctan cekiliyor.
+  const { data: market = [], isLoading: marketLoading } = useQuery({
+    queryKey: ['market'],
+    queryFn: () => api.get('/market').then(r => r.data),
+    refetchInterval: 5 * 60 * 1000,
+  })
+
+  // Portfoy deger grafigi: GERCEK snapshot'lar. Aralik anahtarin parcasi
+  // oldugu icin butona basildiginda react-query yeni veriyi kendisi cekiyor.
+  const { data: history = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['portfolio-history', range],
+    queryFn: () => api
+      .get('/portfolio/history', { params: { range: range === 'Tümü' ? 'TUMU' : range } })
+      .then(r => r.data),
+  })
+
+  // AI analizi her portfoy degisiminde yeniden cagrilmasin diye ayri bir
+  // anahtarda ve uzun staleTime ile tutuluyor — her istek Groq'a gidiyor.
+  const { data: aiText, isLoading: aiLoading, error: aiErr } = useQuery({
+    queryKey: ['ai-analyze'],
+    queryFn: () => api.get('/ai/analyze').then(r => r.data),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  })
+
+  const ai = aiLoading
+    ? { state: 'loading' }
+    : aiErr
+      ? { state: aiErr?.response?.status === 403 ? 'locked' : 'error' }
+      : { state: 'ok' }
+
+  // Sinyaller ve maddeler artik backend'den yapilandirilmis geliyor;
+  // metni regex ile ayiklamaya gerek kalmadi.
+  const signals = aiText?.signals ?? []
+  const bullets = signals.map(s => s.comment).filter(Boolean).slice(0, 4)
 
   /* ----- Tum ozet degerleri kullanicinin gercek portfoyunden ----- */
   const holdings = portfolio?.holdings ?? []
@@ -119,21 +122,42 @@ export default function Dashboard() {
     : null
   const dailyUp = (daily ?? 0) >= 0
 
-  // Coin bazli maliyet = miktar x ortalama alis fiyati (API'den gelen gercek alanlar)
+  // Sembol -> piyasa verisi sozlugu. /market ucu coin basina guncel fiyat ve
+  // 24 saatlik degisim donuyor; HoldingResponse'ta bu alanlar olmadigi icin
+  // tablodaki "Guncel Fiyat" ve "Toplam Deger" kolonlari buradan hesaplaniyor.
+  const marketBySymbol = Object.fromEntries(
+    market.map(m => [String(m.symbol).toUpperCase(), m])
+  )
+
+  // Panel sirasi LIVE_SYMBOLS'un sirasini izler; CoinGecko'nun piyasa
+  // degeri sirasina birakilsa liste her cagri sonrasi yer degistirebilirdi.
+  const livePanel = LIVE_SYMBOLS
+    .map(sym => marketBySymbol[sym])
+    .filter(Boolean)
+
   const rows = holdings.map((h, i) => {
-    const cost = num(h.quantity) * num(h.averageBuyPrice)
+    const qty = num(h.quantity)
+    const avg = num(h.averageBuyPrice)
+    const cost = qty * avg
+    const sym = h.coinSymbol
+
+    // Fiyat onceligi: WebSocket (en taze) > /market ucu > backend holding alani
+    const m = marketBySymbol[String(sym).toUpperCase()]
+    const wsPrice = live[String(sym).toUpperCase()]?.price
+    const price = wsPrice ?? (m ? num(m.price) : (h.currentPrice != null ? num(h.currentPrice) : null))
+
+    const value = price != null ? qty * price : null
+    const change24h = m ? num(m.change24h) : null
+    // Varligin gunluk degisimi = guncel deger x 24 saatlik yuzde degisim
+    const dailyChange = value != null && change24h != null ? value * (change24h / 100) : null
+
     return {
-      id: h.id ?? h.coinSymbol,
-      sym: h.coinSymbol,
-      name: h.coinName ?? h.coinSymbol,
-      qty: num(h.quantity),
-      avg: num(h.averageBuyPrice),
-      cost,
-      // Backend coin bazli guncel fiyat doner ise dogrudan onu kullan
-      price: h.currentPrice != null ? num(h.currentPrice) : null,
-      value: h.currentValue != null ? num(h.currentValue) : null,
-      chg: h.profitLoss != null ? num(h.profitLoss) : null,
-      chgPct: h.profitLossPercentage != null ? num(h.profitLossPercentage) : null,
+      id: h.id ?? sym,
+      sym,
+      name: h.coinName ?? sym,
+      qty, avg, cost, price, value,
+      change24h,
+      dailyChange,
       color: SLICE[i % SLICE.length],
     }
   })
@@ -142,7 +166,7 @@ export default function Dashboard() {
   const costTotal = rows.reduce((s, r) => s + r.cost, 0)
 
   // Varlik dagilimi: canli fiyat varsa guncel degere, yoksa maliyete gore
-  const allocation = rows.map(r => {
+  const allAllocation = rows.map(r => {
     const base = hasLivePrices ? (r.value ?? 0) : r.cost
     const denom = hasLivePrices ? totalValue : costTotal
     return {
@@ -151,20 +175,53 @@ export default function Dashboard() {
       value: base,
       color: r.color,
     }
-  })
+  }).sort((a, b) => b.value - a.value)
 
-  const series = makeSeries(totalValue)
+  // Tasarimdaki gibi: en buyuk 4 varlik ayri, kalanlar tek bir "Diger"
+  // diliminde toplanir. Cok varlikli portfoyde lejant tasmasin diye.
+  const TOP_N = 4
+  const allocation = allAllocation.length > TOP_N + 1
+    ? [
+        ...allAllocation.slice(0, TOP_N),
+        {
+          name: 'Diğer',
+          pct: Number(allAllocation.slice(TOP_N)
+            .reduce((s, a) => s + a.pct, 0).toFixed(1)),
+          value: allAllocation.slice(TOP_N).reduce((s, a) => s + a.value, 0),
+          color: '#8fa0c4',
+        },
+      ]
+    : allAllocation
+
+  // Satirin portfoy payi. allocation listesi siralanip gruplandigi icin
+  // tablo satiriyla indeks eslesmesi kurulamaz, paydan yeniden hesaplaniyor.
+  const share = r => {
+    const base = hasLivePrices ? (r.value ?? 0) : r.cost
+    const denom = hasLivePrices ? totalValue : costTotal
+    return denom ? (base / denom) * 100 : 0
+  }
+
+  // Etiket formati araliga gore degisir: 1 gunde saat, uzun araliklarda tarih.
+  const series = history.map(p => {
+    const d = new Date(p.recordedAt)
+    return {
+      t: range === '1G'
+        ? d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+        : d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }),
+      v: Number(p.totalValue),
+    }
+  })
   const sparkSeed = up ? [12, 15, 13, 18, 16, 21, 19, 24, 22, 27, 25, 30] : [30, 26, 28, 23, 25, 20, 22, 17, 19, 14, 16, 12]
   const barSeed = [22, 30, 18, 36, 26, 42, 30, 48, 38, 55, 44, 62, 50, 68]
 
-  const signals = parseSignals(ai.text)
-  const bullets = toBullets(ai.text)
-  const topAsset = allocation.slice().sort((a, b) => b.pct - a.pct)[0]
+  // Gruplanmamis listeden: aksi halde en buyuk varlik "Diger" cikabilirdi
+  const topAsset = allAllocation[0]
 
   const dash = <span className="muted">—</span>
 
   return (
     <div className="dash">
+      <AddTransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
       {/* Baslik */}
       <div className="dash-head">
         <div>
@@ -172,8 +229,7 @@ export default function Dashboard() {
           <p>Portföyünüzün genel görünümü</p>
         </div>
         <div className="dash-head-actions">
-          <div className="range-select">Son 24 Saat <ChevronDown size={16} color="#7d87a4" /></div>
-          <button className="btn-add" onClick={() => navigate('/portfolio')}><Plus size={16} /> İşlem Ekle</button>
+          <button className="btn-add" onClick={() => setAddOpen(true)}><Plus size={16} /> İşlem Ekle</button>
         </div>
       </div>
 
@@ -258,13 +314,25 @@ export default function Dashboard() {
           <div className="card-head">
             <div className="card-title">Portföy Değeri Grafiği <Info size={14} color="#6f7b96" /></div>
             <div className="ranges">
-              <button className="on">1G</button><button>1H</button><button>1A</button>
-              <button>3A</button><button>1Y</button><button>Tümü</button>
+              {RANGES.map(r => (
+                <button
+                  key={r}
+                  className={r === range ? 'on' : ''}
+                  onClick={() => setRange(r)}
+                >
+                  {r}
+                </button>
+              ))}
             </div>
           </div>
           <div className="big-chart">
-            {series.length === 0 ? (
-              <div className="empty">Grafik için portföyünüze varlık ekleyin.</div>
+            {historyLoading ? (
+              <div className="empty">Yükleniyor...</div>
+            ) : series.length < 2 ? (
+              <div className="empty">
+                Bu aralık için yeterli kayıt yok.<br />
+                Portföy değeri saat başı kaydediliyor; grafik zamanla dolacak.
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -275,7 +343,11 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 4" stroke="#1e2334" vertical={false} />
-                  <XAxis dataKey="t" tick={{ fontSize: 11, fill: '#6f7b96' }} axisLine={false} tickLine={false} interval={15} />
+                  {/* interval sabit 15'ti: 96 noktali uydurma seride dogruydu ama gercek
+                      veride nokta sayisi arakliga gore degisiyor ve tek etiket kaliyordu.
+                      minTickGap, sigdigi kadar etiketi kendisi seciyor. */}
+                  <XAxis dataKey="t" tick={{ fontSize: 11, fill: '#6f7b96' }} axisLine={false}
+                    tickLine={false} interval="preserveStartEnd" minTickGap={45} />
                   <YAxis tick={{ fontSize: 11, fill: '#6f7b96' }} axisLine={false} tickLine={false} width={62}
                     domain={['dataMin', 'dataMax']} tickFormatter={shortTl} />
                   <Tooltip formatter={v => [tl(v), '']}
@@ -338,7 +410,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {rows.slice(0, 5).map((r, i) => (
+              {rows.slice(0, 5).map(r => (
                 <tr key={r.id}>
                   <td>
                     <div className="asset-cell">
@@ -349,18 +421,22 @@ export default function Dashboard() {
                   <td className="muted">{r.qty} {r.sym}</td>
                   <td>
                     {tl(hasLivePrices ? r.price : r.avg)}
-                    {hasLivePrices && (
-                      <span className={`cell-sub ${r.chgPct >= 0 ? 'pos' : 'neg'}`}>{pctStr(r.chgPct)}</span>
+                    {r.change24h != null && (
+                      <span className={`cell-sub ${r.change24h >= 0 ? 'pos' : 'neg'}`}>
+                        {pctStr(r.change24h)}
+                      </span>
                     )}
                   </td>
                   <td>{tl(hasLivePrices ? r.value : r.cost)}</td>
-                  {hasLivePrices ? (
-                    <td className={r.chg >= 0 ? 'pos' : 'neg'}>
-                      {r.chg >= 0 ? '+ ' : '- '}{tl(Math.abs(r.chg))}
-                      <span className={`cell-sub ${r.chgPct >= 0 ? 'pos' : 'neg'}`}>{pctStr(r.chgPct)}</span>
+                  {r.dailyChange != null ? (
+                    <td className={r.dailyChange >= 0 ? 'pos' : 'neg'}>
+                      {r.dailyChange >= 0 ? '+ ' : '- '}{tl(Math.abs(r.dailyChange))}
+                      <span className={`cell-sub ${r.change24h >= 0 ? 'pos' : 'neg'}`}>
+                        {pctStr(r.change24h)}
+                      </span>
                     </td>
                   ) : (
-                    <td>{allocation[i]?.pct ?? 0}%</td>
+                    <td>{share(r).toFixed(1)}%</td>
                   )}
                 </tr>
               ))}
@@ -393,9 +469,9 @@ export default function Dashboard() {
             {ai.state === 'ok' && (
               <>
                 <div className="ai-lead">
-                  {assetCount > 0
-                    ? `Portföyünüzde ${assetCount} farklı varlık var${topAsset ? `, en büyüğü ${topAsset.name} (%${topAsset.pct})` : ''}. İşte analizim:`
-                    : 'Henüz varlığınız yok. İlk işleminizi ekleyince analiz burada görünecek.'}
+                  {aiText?.headline ?? (assetCount > 0
+                    ? `Portföyünüzde ${assetCount} farklı varlık var${topAsset ? `, en büyüğü ${topAsset.name} (%${topAsset.pct})` : ''}.`
+                    : 'Henüz varlığınız yok. İlk işleminizi ekleyince analiz burada görünecek.')}
                 </div>
                 <div className="ai-list">
                   {bullets.map((b, i) => (
@@ -410,8 +486,8 @@ export default function Dashboard() {
               <div className="ai-sign-title">Al/Sat Önerisi:</div>
               <div className="ai-signals">
                 {signals.map(s => (
-                  <span key={s.sym} className={`sig ${s.action === 'AL' ? 'buy' : s.action === 'SAT' ? 'sell' : 'hold'}`}>
-                    {s.sym}: {s.action}
+                  <span key={s.symbol} className={`sig ${s.action === 'AL' ? 'buy' : s.action === 'SAT' ? 'sell' : 'hold'}`}>
+                    {s.symbol}: {s.action}
                   </span>
                 ))}
               </div>
@@ -431,32 +507,32 @@ export default function Dashboard() {
             </span>
           </div>
           <div className="live-list">
-            {rows.length === 0 && <div className="empty">Takip edilen varlık yok.</div>}
-            {rows.map(r => {
-              // WebSocket'ten gelen canli fiyat varsa onu, yoksa ortalama alis fiyatini goster
-              const entry = live[r.sym?.toUpperCase()]
-              const wsPct = changePct(entry)
-              const shown = entry?.price ?? r.price ?? r.avg
-              const pct = wsPct ?? r.chgPct
+            {marketLoading && <div className="empty">Piyasa verisi yükleniyor...</div>}
+            {!marketLoading && livePanel.length === 0 && (
+              <div className="empty">Piyasa verisi alınamadı.</div>
+            )}
+            {livePanel.map(m => {
+              // WebSocket'ten o sembol icin daha yeni bir fiyat geldiyse onu kullan
+              const wsPrice = live[m.symbol?.toUpperCase()]?.price
+              const shown = wsPrice ?? num(m.price)
+              const chg = num(m.change24h)
+              const up = chg >= 0
               return (
-                <div className="live-row" key={r.id}>
-                  <Coin sym={r.sym} size={30} />
-                  <span className="live-pair">{r.sym}/USDT</span>
+                <div className="live-row" key={m.symbol}>
+                  <Coin sym={m.symbol} size={30} />
+                  <span className="live-pair">{m.symbol}/USDT</span>
                   <div className="live-nums">
-                    <span className="live-price">{tl(shown)}</span>
-                    <span className={`live-chg ${pct == null ? 'muted' : pct >= 0 ? 'pos' : 'neg'}`}>
-                      {pct == null ? (entry ? 'güncel' : 'ort. alış') : pctStr(pct)}
-                    </span>
+                    <span className="live-price">{money(shown)}</span>
+                    <span className={`live-chg ${up ? 'pos' : 'neg'}`}>{pctStr(chg)}</span>
                   </div>
                   <div className="live-spark">
-                    <Spark data={sparkSeed.slice(0, 8)} color={pct == null || pct >= 0 ? '#34d399' : '#f87171'} />
+                    {m.sparkline?.length > 1 && (
+                      <Spark data={m.sparkline.map(Number)} color={up ? '#34d399' : '#f87171'} />
+                    )}
                   </div>
                 </div>
               )
             })}
-          </div>
-          <div className="card-foot" onClick={() => navigate('/markets')}>
-            Tüm Piyasaları Görüntüle <ChevronRight size={15} />
           </div>
         </div>
       </div>

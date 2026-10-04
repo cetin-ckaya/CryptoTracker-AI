@@ -31,21 +31,7 @@
   gap: 12px;
 }
 
-.range-select {
-  height: 40px;
-  min-width: 160px;
-  padding: 0 14px;
-  border: 1px solid #262b42;
-  background: #171b2c;
-  border-radius: 9px;
-  color: #c3cad9;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  cursor: pointer;
-}
+
 
 .btn-add {
   height: 40px;
@@ -98,8 +84,8 @@
 .stat {
   position: relative;
   overflow: hidden;
-  min-height: 132px;
-  padding: 17px 19px;
+  min-height: 164px;
+  padding: 17px 19px 0;
 }
 
 .stat-top {
@@ -116,6 +102,9 @@
 }
 
 .stat-ico {
+  position: absolute;
+  top: 17px;
+  right: 19px;
   width: 42px;
   height: 42px;
   border-radius: 11px;
@@ -133,10 +122,11 @@
 
 .stat-value {
   font-size: 25px;
+  margin-top: 14px;
+  text-shadow: 0 0 7px #141828, 0 0 3px #141828;
   font-weight: 700;
   letter-spacing: -0.8px;
   color: #f4f7fb;
-  margin-top: 12px;
   position: relative;
   z-index: 2;
 }
@@ -145,6 +135,7 @@
 
 .stat-sub {
   font-size: 12.5px;
+  text-shadow: 0 0 7px #141828, 0 0 4px #141828, 0 0 2px #141828;
   margin-top: 7px;
   color: #8b95b0;
   position: relative;
@@ -154,13 +145,19 @@
 .stat-sub.green { color: #34d399; }
 .stat-sub.red   { color: #f87171; }
 
+/* Mini grafik kutunun tamamini kat eder ve metnin altindan gecer:
+   deger ve yuzde z-index ile ustte kalir, grafik arkada akar. */
 .stat-spark {
   position: absolute;
+  left: 0;
   right: 0;
   bottom: 0;
-  width: 58%;
-  height: 62px;
+  height: 52px;
   z-index: 1;
+  /* Grafik metnin ARKASINDAN gecer. Deger ve yuzde ikon mutlak konuma
+     alindiktan sonra yukari ciktigi icin grafik artik yazinin uzerine
+     binmiyor; yine de metinlerde kart rengiyle hale var (text-shadow). */
+  opacity: 0.7;
   pointer-events: none;
 }
 

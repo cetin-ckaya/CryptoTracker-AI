@@ -40,7 +40,7 @@ export default function Statusbar() {
         <span>{fmt(time)}</span>
       </div>
       <div className="sb-item sb-right">
-        <span style={{ color: '#626d88' }}>CryptoTracker v2.0.0</span>
+        <span style={{ color: '#626d88' }}>CryptoTracker</span>
       </div>
     </footer>
   )

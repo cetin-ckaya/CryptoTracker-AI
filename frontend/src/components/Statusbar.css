@@ -1,5 +1,10 @@
 .statusbar {
-  height: 36px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  height: var(--statusbar-h);
   background: #0f1220;
   border-top: 1px solid #1d2233;
   display: flex;
@@ -8,7 +13,6 @@
   padding: 0 24px;
   font-size: 11.5px;
   color: #8b95b0;
-  flex-shrink: 0;
 }
 
 .sb-label {
