@@ -37,6 +37,15 @@ public class UserService {
         this.subscriptionService = subscriptionService;
     }
 
+    // Oturumdaki kullanicinin bilgisi — /api/v1/auth/me icin.
+    // Entity degil UserResponse donuyoruz: User icinde passwordHash var,
+    // entity dogrudan JSON'a cevrilirse hash disari sizar.
+    public UserResponse getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .map(userMapper::toResponse)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+    }
+
     public UserResponse register(CreateUserRequest request) {
         // Aynı email ile kayıt varsa hata fırlat (DB'de unique constraint var ama
         // önceden kontrol etmek daha anlamlı bir hata mesajı üretir).
@@ -70,7 +79,7 @@ public class UserService {
         Subscription subscription = subscriptionService.getOrCreateSubscription(user.getId());
         String role = "ROLE_" + subscription.getTier().name();
         String token = jwtTokenProvider.generateToken(user.getEmail(), role);
-        return new AuthResponse(token);
+        return new AuthResponse(token, user.getEmail(), user.getFullName());
     }
 
 }

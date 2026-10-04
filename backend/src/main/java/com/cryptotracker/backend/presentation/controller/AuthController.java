@@ -5,6 +5,8 @@ import com.cryptotracker.backend.application.dto.request.LoginRequest;
 import com.cryptotracker.backend.application.dto.response.AuthResponse;
 import com.cryptotracker.backend.application.dto.response.UserResponse;
 import com.cryptotracker.backend.application.service.UserService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +31,25 @@ public class AuthController {
         UserResponse response = userService.register(request);
         // 201 Created: yeni kaynak oluşturuldu — POST'un standart başarı kodu budur.
         return ResponseEntity.status(201).body(response);
+    }
+
+    // GET /api/v1/auth/me
+    //
+    // Oturumdaki kullanicinin guncel bilgisi. Neden gerekli: ad soyad giris
+    // yanitiyla birlikte tarayiciya kaydediliyor. AuthResponse'a fullName
+    // eklenmeden once giris yapmis bir kullanicinin kaydinda bu alan yok ve
+    // arayuz e-postanin @ oncesine dusup "cetolamak" gibi gosteriyordu.
+    // Arayuz bu ucu cagirip kaydini kendi kendine onariyor.
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> me() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        // Bu yol permitAll; token gonderilmemisse kimlik olusmaz.
+        if (auth == null || !(auth.getPrincipal() instanceof String email)) {
+            return ResponseEntity.status(401).build();
+        }
+
+        return ResponseEntity.ok(userService.getByEmail(email));
     }
 
     @PostMapping("/login")
