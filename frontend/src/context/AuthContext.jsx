@@ -10,7 +10,7 @@ function read(key) {
 }
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => read('token'))
+  const [token, setTokenState] = useState(() => read('token'))
   const [user, setUser] = useState(() => {
     const u = read('user')
     return u ? JSON.parse(u) : null
@@ -22,8 +22,21 @@ export function AuthProvider({ children }) {
     logoutStorage()
     store.setItem('token', token)
     store.setItem('user', JSON.stringify(userData))
-    setToken(token)
+    setTokenState(token)
     setUser(userData)
+  }
+
+  // Oturumu bozmadan YALNIZCA token'i degistirir.
+  //
+  // Plan degisiminde gerekiyor: yetki JWT'nin icinde tasindigi icin
+  // yukseltmeden sonra sunucu yeni rolu tasiyan taze bir token donuyor ve
+  // eskisinin yerine yazilmasi gerekiyor. Kullanici cikis yapmadan yeni
+  // yetkisini kullanabiliyor.
+  function setToken(yeniToken) {
+    // Oturum hangi depodaysa orada kalsin ("Beni hatirla" secimi bozulmasin)
+    const store = localStorage.getItem('token') ? localStorage : sessionStorage
+    store.setItem('token', yeniToken)
+    setTokenState(yeniToken)
   }
 
   function logoutStorage() {
@@ -35,7 +48,7 @@ export function AuthProvider({ children }) {
 
   function logout() {
     logoutStorage()
-    setToken(null)
+    setTokenState(null)
     setUser(null)
   }
 
@@ -65,7 +78,7 @@ export function AuthProvider({ children }) {
   }, [token, user?.fullName])
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, login, logout, setToken }}>
       {children}
     </AuthContext.Provider>
   )

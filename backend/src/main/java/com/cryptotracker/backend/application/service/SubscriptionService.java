@@ -34,8 +34,21 @@ public class SubscriptionService {
 
     // Kullanicinin tier'ini PREMIUM yapar ve DB'ye kaydeder
     public Subscription upgradeToPremium(Long userId){
+        return changeTier(userId, SubscriptionTier.PREMIUM);
+    }
+
+    // PREMIUM'dan FREE'ye doner.
+    //
+    // Neden var: plan degisiminin iki yonu de denenebilmeli. Yalnizca
+    // yukseltme olsaydi bir kez PREMIUM olan kullanici ucretsiz ekrani
+    // bir daha goremezdi.
+    public Subscription downgradeToFree(Long userId){
+        return changeTier(userId, SubscriptionTier.FREE);
+    }
+
+    private Subscription changeTier(Long userId, SubscriptionTier tier){
         Subscription sub = getOrCreateSubscription(userId);
-        sub.setTier(SubscriptionTier.PREMIUM);
+        sub.setTier(tier);
         return subscriptionRepository.save(sub);
     }
 }

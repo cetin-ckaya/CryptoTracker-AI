@@ -73,6 +73,53 @@
 .sidebar-system .sidebar-item { font-size: 12.5px; height: 38px; }
 
 /* ---------- Alt durum kutusu ---------- */
+/* ---------- Yukseltme karti ---------- */
+.sidebar-upgrade {
+  margin: auto 14px 10px;
+  padding: 13px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(139, 123, 255, 0.3);
+  background: linear-gradient(160deg, rgba(109, 93, 246, 0.18), rgba(109, 93, 246, 0.05));
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.sidebar-upgrade:hover { border-color: rgba(139, 123, 255, 0.55); }
+
+.su-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a394ff;
+}
+
+.su-text {
+  font-size: 11px;
+  color: #8b95b0;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+.su-btn {
+  margin-top: 10px;
+  height: 30px;
+  border-radius: 7px;
+  background: #6c5ce7;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+
+.sidebar-upgrade:hover .su-btn { background: #7d6ef0; }
+
+/* Kart gorunurken bosluk yukarida toplanir, status kutusu ona yapisir */
+.sidebar-upgrade ~ .sidebar-status { margin-top: 0; }
+
+/* Yukseltme karti varken auto margin onda; status kutusu normal akar */
 .sidebar-status {
   margin: auto 14px 0;
   padding: 13px 14px;

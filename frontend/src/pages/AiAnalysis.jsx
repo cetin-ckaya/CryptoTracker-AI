@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Sparkles, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react'
 import api from '../api/axios'
 import Coin from '../components/Coin'
 import { money } from '../utils/format'
+import UpgradeModal from '../components/UpgradeModal'
 import './AiAnalysis.css'
 
 // Sinyal rozetinin rengi: AL yesil, SAT kirmizi, TUT amber
@@ -10,6 +12,13 @@ const ACTION_CLASS = { AL: 'buy', SAT: 'sell', TUT: 'hold' }
 
 export default function AiAnalysis() {
   const queryClient = useQueryClient()
+  const [yukseltAcik, setYukseltAcik] = useState(false)
+
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => api.get('/subscription').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
 
   // Dashboard'daki kartla AYNI anahtar: iki ekran tek analizi paylasir,
   // sayfalar arasi gecis her seferinde Groq'a yeni istek atmaz.
@@ -32,6 +41,11 @@ export default function AiAnalysis() {
 
   return (
     <div className="ai-page">
+      <UpgradeModal
+        open={yukseltAcik}
+        onClose={() => setYukseltAcik(false)}
+        mevcutTier={subscription?.tier}
+      />
       <div className="ai-head">
         <div>
           <div className="ai-head-title">
@@ -80,9 +94,14 @@ export default function AiAnalysis() {
               <div className="headline">{data.headline ?? 'Analiz hazır'}</div>
               {data.summary && <div className="summary">{data.summary}</div>}
               {!data.personalized && (
-                <div className="summary free-note">
-                  Ücretsiz planda BTC, ETH ve SOL için genel değerlendirme gösterilir.
-                  Portföyünüze özel analiz Premium üyelikte.
+                <div className="free-note-row">
+                  <span className="summary free-note">
+                    Ücretsiz planda BTC, ETH ve SOL için genel değerlendirme gösterilir.
+                    Portföyünüze özel analiz Premium üyelikte.
+                  </span>
+                  <button className="free-note-btn" onClick={() => setYukseltAcik(true)}>
+                    Premium’a geç
+                  </button>
                 </div>
               )}
             </div>

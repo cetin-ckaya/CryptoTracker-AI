@@ -1,0 +1,204 @@
+.up-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 9, 18, 0.72);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  z-index: 500;
+  padding: 20px;
+}
+
+.up-modal {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  background: #141828;
+  border: 1px solid #262b42;
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.up-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #6f7b96;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 0;
+}
+
+.up-close:hover { color: #e6ebf3; }
+
+/* ---------- Baslik ---------- */
+.up-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.up-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(109, 93, 246, 0.16);
+  color: #8b7bff;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.up-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.up-head p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: #8b95b0;
+  line-height: 1.5;
+}
+
+/* ---------- Plan kartlari ---------- */
+.up-plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.up-plan {
+  border: 1px solid #242a40;
+  border-radius: 11px;
+  padding: 15px 16px;
+  background: #11152333;
+}
+
+.up-plan.one-cikan {
+  border-color: rgba(139, 123, 255, 0.45);
+  background: rgba(109, 93, 246, 0.07);
+}
+
+.up-plan.mevcut { opacity: 0.75; }
+
+.up-plan-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.up-plan-ad {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.up-rozet {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #8b95b0;
+  background: #1c2134;
+  border: 1px solid #2a3148;
+  padding: 3px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.up-plan ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.up-plan li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #c3cad9;
+  line-height: 1.45;
+}
+
+.up-plan li svg { flex: none; margin-top: 2px; color: #34d399; }
+
+.up-plan li.yok { color: #6f7b96; }
+.up-plan li.yok svg { color: #5a6480; }
+
+/* ---------- Demo uyarisi ---------- */
+.up-demo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 11px 13px;
+  border: 1px solid rgba(240, 180, 41, 0.25);
+  background: rgba(240, 180, 41, 0.07);
+  border-radius: 9px;
+  font-size: 12px;
+  color: #d9c08a;
+  line-height: 1.5;
+}
+
+.up-demo svg { flex: none; margin-top: 1px; }
+
+.up-hata {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: #f87171;
+}
+
+/* ---------- Butonlar ---------- */
+.up-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.up-btn-ghost,
+.up-btn-solid {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.up-btn-ghost {
+  background: transparent;
+  border: 1px solid #2a3148;
+  color: #c3cad9;
+}
+
+.up-btn-ghost:hover:not(:disabled) { background: #1a1f31; }
+
+.up-btn-solid {
+  background: #6c5ce7;
+  border: none;
+  color: #fff;
+}
+
+.up-btn-solid:hover:not(:disabled) { background: #7d6ef0; }
+
+.up-btn-ghost:disabled,
+.up-btn-solid:disabled { opacity: 0.6; cursor: default; }
+
+@media (max-width: 560px) {
+  .up-plans { grid-template-columns: 1fr; }
+}

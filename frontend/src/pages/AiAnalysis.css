@@ -134,6 +134,34 @@
 
 .ai-overview-text .free-note { color: #a394ff; }
 
+/* Sinirin hissedildigi yere eylem butonu: kullanici tam burada
+   "neden goremiyorum" diye dusunuyor. */
+.free-note-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+
+.free-note-row .free-note { margin-top: 0; flex: 1 1 280px; }
+
+.free-note-btn {
+  flex: none;
+  height: 34px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 9px;
+  background: #6c5ce7;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.free-note-btn:hover { background: #7d6ef0; }
+
 .ai-counts {
   display: flex;
   gap: 10px;
@@ -164,7 +192,14 @@
 /* ---------- Coin kartlari ---------- */
 .ai-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  /* En fazla 4 kolon, sonra alt satira gecer.
+     auto-fit tek basina yer buldukca kolon eklemeye devam ediyordu; genis
+     ekranda 7 kart tek satira diziliyor ve her biri okunamayacak kadar
+     sikisiyordu.
+     minmax'in alt siniri iki degerin BUYUGU: kapsayicinin dortte biri
+     (kolon sayisini 4'te tutar) veya 290px (dar ekranda kolon sayisini
+     kendiliginden azaltir). */
+  grid-template-columns: repeat(auto-fit, minmax(max(290px, calc((100% - 3 * 18px) / 4)), 1fr));
   gap: 18px;
 }
 
