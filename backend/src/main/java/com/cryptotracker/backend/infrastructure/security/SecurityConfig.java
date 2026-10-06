@@ -1,6 +1,7 @@
 package com.cryptotracker.backend.infrastructure.security;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -56,6 +57,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Auth endpoint'leri herkese acik — token olmadan erisilebilir.
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        // Piyasa verisi herkese acik: icinde kullaniciya ait hicbir
+                        // bilgi yok, CoinGecko'nun zaten herkese acik fiyatlari.
+                        // Giris ekranindaki fiyat seritleri bu uctan besleniyor;
+                        // kapali oldugunda ziyaretci hicbir zaman dolmayan kutular
+                        // goruyordu.
+                        //
+                        // Dis servise yuk binmiyor: yanit Redis'ten geliyor,
+                        // onbellegi 5 dakikada bir scheduler tazeliyor.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/market").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
                         // Diger her endpoint token zorunlu.

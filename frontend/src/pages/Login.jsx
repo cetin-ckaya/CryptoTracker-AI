@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useQuery } from '@tanstack/react-query'
 import useLivePrices, { changePct } from '../hooks/useLivePrices'
+import Coin from '../components/Coin'
 import { money } from '../utils/format'
 import api from '../api/axios'
 import './Auth.css'
@@ -18,6 +20,20 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
   const { prices } = useLivePrices()
+
+  // WebSocket yalnizca scheduler yayin yaptiginda (5 dakikada bir) veri
+  // gonderiyor; o yuzden seritler acilista surekli "bekleniyor" yaziyordu.
+  // Ilk degerleri /market ucundan cekiyoruz, canli guncelleme yine WebSocket'ten.
+  const { data: market = [] } = useQuery({
+    queryKey: ['market'],
+    queryFn: () => api.get('/market').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+
+  const marketBySymbol = Object.fromEntries(
+    market.map(m => [String(m.symbol).toUpperCase(), m])
+  )
   const navigate = useNavigate()
 
   async function handleSubmit(e) {
@@ -43,8 +59,20 @@ export default function Login() {
       <div className="panel">
         <div className="brand">
           <div className="mark">
-            <svg width="19" height="19" viewBox="0 0 256 256" fill="currentColor">
-              <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm0-152a16,16,0,1,0,16,16A16,16,0,0,0,128,64Zm0,80a16,16,0,1,0,16,16A16,16,0,0,0,128,144Z" />
+            <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+              <defs>
+                <linearGradient id="authLinkGrad" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#1668a8" />
+                  <stop offset="50%" stopColor="#1fa5b4" />
+                  <stop offset="100%" stopColor="#35e3bb" />
+                </linearGradient>
+              </defs>
+              <rect x="5.5" y="21" width="26" height="17" rx="8.5"
+                transform="rotate(-45 18.5 29.5)"
+                stroke="url(#authLinkGrad)" strokeWidth="5" fill="none" strokeLinejoin="round" />
+              <rect x="16.5" y="10" width="26" height="17" rx="8.5"
+                transform="rotate(-45 29.5 18.5)"
+                stroke="url(#authLinkGrad)" strokeWidth="5" fill="none" strokeLinejoin="round" />
             </svg>
           </div>
           <div>
@@ -61,14 +89,18 @@ export default function Login() {
 
         <div className="tickers">
           {TICKERS.map(sym => {
+            // Oncelik: WebSocket (en taze) > /market ucu
             const entry = prices[sym]
-            const pct = changePct(entry)
+            const m = marketBySymbol[sym]
+            const price = entry ? entry.price : m?.price
+            const pct = changePct(entry) ?? (m?.change24h != null ? Number(m.change24h) : null)
             return (
               <div className="ticker" key={sym}>
+                <Coin sym={sym} src={m?.iconUrl} size={22} />
                 <span className="tk-name">{sym}/USDT</span>
-                <span className="tk-val">{entry ? money(entry.price) : '—'}</span>
+                <span className="tk-val">{price != null ? money(price) : '—'}</span>
                 <span className={`tk-chg ${pct == null ? '' : pct >= 0 ? 'up' : 'down'}`}>
-                  {pct == null ? (entry ? 'güncel' : 'bekleniyor') : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
+                  {pct == null ? (price != null ? 'güncel' : 'bekleniyor') : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
                 </span>
               </div>
             )

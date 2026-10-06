@@ -71,8 +71,20 @@ export default function Register() {
       <div className="panel">
         <div className="brand">
           <div className="mark">
-            <svg width="19" height="19" viewBox="0 0 256 256" fill="currentColor">
-              <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm0-152a16,16,0,1,0,16,16A16,16,0,0,0,128,64Zm0,80a16,16,0,1,0,16,16A16,16,0,0,0,128,144Z" />
+            <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+              <defs>
+                <linearGradient id="authLinkGrad" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#1668a8" />
+                  <stop offset="50%" stopColor="#1fa5b4" />
+                  <stop offset="100%" stopColor="#35e3bb" />
+                </linearGradient>
+              </defs>
+              <rect x="5.5" y="21" width="26" height="17" rx="8.5"
+                transform="rotate(-45 18.5 29.5)"
+                stroke="url(#authLinkGrad)" strokeWidth="5" fill="none" strokeLinejoin="round" />
+              <rect x="16.5" y="10" width="26" height="17" rx="8.5"
+                transform="rotate(-45 29.5 18.5)"
+                stroke="url(#authLinkGrad)" strokeWidth="5" fill="none" strokeLinejoin="round" />
             </svg>
           </div>
           <div>
