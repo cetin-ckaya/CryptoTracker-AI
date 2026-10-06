@@ -37,4 +37,9 @@ public class Transaction extends BaseEntity{
 
     @Column(name = "transaction_date",nullable = false)
     private LocalDateTime transactionDate;
+
+    // Yalnizca SELL islemlerinde dolu: (satis fiyati - ortalama alis maliyeti) x miktar
+    // Alimlarda null kalir — alirken gerceklesen bir kar/zarar olmaz.
+    @Column(name = "realized_profit_loss")
+    private BigDecimal realizedProfitLoss;
 }

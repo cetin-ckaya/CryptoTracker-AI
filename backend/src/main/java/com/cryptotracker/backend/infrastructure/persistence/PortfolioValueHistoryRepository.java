@@ -4,6 +4,7 @@ import com.cryptotracker.backend.domain.model.PortfolioValueHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface PortfolioValueHistoryRepository extends JpaRepository<PortfolioValueHistory, Long> {
@@ -15,5 +16,12 @@ public interface PortfolioValueHistoryRepository extends JpaRepository<Portfolio
     Optional<PortfolioValueHistory> findFirstByPortfolioIdAndRecordedAtBeforeOrderByRecordedAtDesc(
             Long portfolioId,
             LocalDateTime before
+    );
+
+    // Verilen andan SONRAKI tum snapshot'lar, eskiden yeniye.
+    // Grafik soldan saga ciziliyor, bu yuzden siralama Asc.
+    List<PortfolioValueHistory> findByPortfolioIdAndRecordedAtAfterOrderByRecordedAtAsc(
+            Long portfolioId,
+            LocalDateTime after
     );
 }

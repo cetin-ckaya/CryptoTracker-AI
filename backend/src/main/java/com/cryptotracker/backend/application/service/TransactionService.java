@@ -70,7 +70,8 @@ public class TransactionService {
 
         // Once pozisyonu guncelle: satista yetersiz bakiye varsa buradan
         // exception firlar ve islem hic kaydedilmez.
-        applyToHolding(portfolio, coin, request);
+        // Donus degeri satislarda gerceklesen kar/zarar, alimlarda null.
+        BigDecimal realized = applyToHolding(portfolio, coin, request);
 
         // Transaction nesnesini oluştur ve alanları doldur
         Transaction transaction = new Transaction();
@@ -82,6 +83,7 @@ public class TransactionService {
         transaction.setTotalAmount(totalAmount);
         // İşlem zamanı: şu an — client'tan göndermeye gerek yok, sunucu belirler
         transaction.setTransactionDate(LocalDateTime.now());
+        transaction.setRealizedProfitLoss(realized);
 
         Transaction saved = transactionRepository.save(transaction);
 
@@ -96,7 +98,8 @@ public class TransactionService {
     //         fiyati agirlikli ortalama ile yeniden hesaplanir.
     // SATIM : miktar azalir. Elde olandan fazlasi satilamaz. Miktar sifira
     //         inerse pozisyon tamamen silinir.
-    private void applyToHolding(Portfolio portfolio, Coin coin, CreateTransactionRequest request) {
+    // Donus: satislarda gerceklesen kar/zarar, alimlarda null.
+    private BigDecimal applyToHolding(Portfolio portfolio, Coin coin, CreateTransactionRequest request) {
         Optional<Holding> existing =
                 holdingRepository.findByPortfolioIdAndCoinId(portfolio.getId(), coin.getId());
 
@@ -130,6 +133,9 @@ public class TransactionService {
             holding.setAverageBuyPrice(newAverage);
             holdingRepository.save(holding);
 
+            // Alimda gerceklesen kar/zarar yok
+            return null;
+
         } else { // SELL
             Holding holding = existing.orElseThrow(() ->
                     new BusinessException("Bu coin portfoyunuzde bulunmuyor"));
@@ -144,6 +150,17 @@ public class TransactionService {
                         + " " + coin.getSymbol() + " var");
             }
 
+            // GERCEKLESEN KAR/ZARAR.
+            //
+            // Ortalama maliyet yonteminde satilan birimlerin maliyeti, o andaki
+            // ortalama alis fiyatidir. Kazanc = (satis fiyati - ortalama) x miktar.
+            //
+            // Bu degeri holding'i guncellemeden ONCE hesapliyoruz: asagida
+            // holding silinebiliyor ve ortalama fiyata erisim kalmiyor.
+            BigDecimal realized = request.getPricePerUnit()
+                    .subtract(holding.getAverageBuyPrice())
+                    .multiply(request.getQuantity());
+
             if (remaining.compareTo(BigDecimal.ZERO) == 0) {
                 // Pozisyon tamamen kapandi — satir birakmaya gerek yok
                 holdingRepository.delete(holding);
@@ -153,6 +170,8 @@ public class TransactionService {
                 holding.setQuantity(remaining);
                 holdingRepository.save(holding);
             }
+
+            return realized;
         }
     }
 
