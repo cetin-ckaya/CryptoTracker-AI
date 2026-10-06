@@ -29,12 +29,15 @@ public class MarketController {
     // Takip edilen tum coinlerin fiyati, 24 saatlik degisimi ve sparkline'i.
     @GetMapping
     public ResponseEntity<List<CoinMarketResponse>> getMarket() {
-        // Hangi coinlerin cekilecegi coins tablosundan gelir.
-        // coingecko_id bos olan satirlar atlanir — o id olmadan CoinGecko'ya sorulamaz.
+        // Yalnizca izleme listesindeki coinler (is_free_tier_watchlist).
+        // Katalogda 100 coin var ama panel 5 tanesini gosteriyor; hepsinin
+        // 7 gunluk grafigini cekmek gereksiz veri indirmekti.
+        //
+        // coingecko_id bos olan satirlar atlanir — o id olmadan sorulamaz.
         // sorted() sart: onbellek anahtari bu listenin metin hali oldugu icin
         // MarketScheduler ile ayni siralama uretilmeli, yoksa scheduler'in
         // yazdigi kayit bulunamaz ve bosuna yeni istek atilir.
-        List<String> ids = coinRepository.findAll().stream()
+        List<String> ids = coinRepository.findByIsFreeTierWatchlistTrue().stream()
                 .map(coin -> coin.getCoingeckoId())
                 .filter(id -> id != null && !id.isBlank())
                 .distinct()

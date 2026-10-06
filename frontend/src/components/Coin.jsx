@@ -1,6 +1,39 @@
-// Coin sembolune gore SVG ikon dondurur.
-// Dashboard, Portfoyum ve Islemlerim sayfalarinin ortak bileseni.
-export default function Coin({ sym, size = 32 }) {
+import { useState } from 'react'
+import useCoinIcons from '../hooks/useCoinIcons'
+
+// Coin ikonu. Dashboard, Portfoyum, Islemlerim ve islem ekleme penceresinin
+// ortak bileseni.
+//
+// Once CoinGecko'nun gercek logosunu dener (coins.icon_url). Adres yoksa veya
+// gorsel yuklenemezse asagidaki elle cizilmis SVG'lere duser — boylece ag
+// erisimi olmadiginda da ekran bos kalmaz.
+// src: ikon adresi disaridan verilebilir. Giris ekrani /api/v1/coins ucuna
+// erisemiyor (kimlik dogrulama istiyor), ama /market yanitinda iconUrl zaten
+// var — oradan gecirilir.
+export default function Coin({ sym, size = 32, src }) {
+  const icons = useCoinIcons()
+  const [hata, setHata] = useState(false)
+
+  const url = src ?? icons[String(sym ?? '').toUpperCase()]
+  if (url && !hata) {
+    return (
+      <img
+        src={url}
+        alt={sym}
+        width={size}
+        height={size}
+        loading="lazy"
+        onError={() => setHata(true)}
+        style={{ borderRadius: '50%', flexShrink: 0, display: 'block' }}
+      />
+    )
+  }
+
+  return <CoinSvg sym={sym} size={size} />
+}
+
+// Yedek: elle cizilmis SVG'ler
+function CoinSvg({ sym, size }) {
   const p = { width: size, height: size, viewBox: '0 0 40 40', xmlns: 'http://www.w3.org/2000/svg' }
   switch ((sym ?? '').toUpperCase()) {
     case 'BTC': return <svg {...p}><circle cx="20" cy="20" r="20" fill="#F7931A"/><path fill="#fff" d="M25.5 12.2c2.4.7 3.7 2.3 3.3 4.5-.2 1.2-.9 2.1-2 2.6 1.8.8 2.5 2.3 2 4.1-.7 2.6-3 3.8-6.2 3.6l-.5 2.7-2-.4.5-2.7-1.6-.3-.5 2.7-2-.4.5-2.7-2-.4.4-2.2 1.6.3 1.8-9.1-1.6-.3.4-2.2 2 .4.5-2.7 2 .4-.5 2.7c.6.1 1.2.2 1.6.3l.5-2.7 2 .4-.5 2.7Zm-4.4 3-1 5c1.9.3 4.5.5 4.9-1.9.4-2.3-2.1-2.8-3.9-3.1Zm-1.4 7-.8 4.4c2.1.4 5.1.7 5.5-1.9.4-2.5-2.5-3-4.7-2.5Z"/></svg>

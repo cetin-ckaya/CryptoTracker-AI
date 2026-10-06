@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,9 +76,12 @@ public class MarketScheduler {
         // cagriyi tekrarliyordu: 6 coin icin 12 istek. CoinGecko'nun ucretsiz plani
         // bunu birkac saniyede 429 Too Many Requests ile reddediyordu.
         // /coins/markets ucu hepsini birlikte donuyor — 12 istek 1 oldu.
+        // Fiyat tazeleme: sparkline ISTEMIYORUZ.
+        // Grafik yalnizca panelde gosterilen 5 coin icin gerekli; 100 coinin
+        // 7 gunluk egrisini indirmek bosuna veri yukuydu.
         List<CoinMarketResponse> markets;
         try {
-            markets = coinGeckoService.fetchMarkets(ids);
+            markets = coinGeckoService.fetchMarkets(ids, false);
         } catch (Exception e) {
             // Zamanlanmis gorev asla istisna firlatmamali: karsisinda bir istemci yok,
             // sadece log'a duser. Dis servisin cokmesi beklenen bir durum, bu yuzden
@@ -94,25 +98,56 @@ public class MarketScheduler {
             return;
         }
 
-        // /api/v1/market ucunun gordugu onbellegi tazele
-        coinGeckoService.cacheMarkets(ids, markets);
+        // Panel verisini AYRI cek: yalnizca izleme listesindeki coinler,
+        // bu kez grafikle birlikte. Iki istek oluyor ama ikincisi 5 coinlik.
+        refreshWatchlistPanel();
 
-        // Sembol -> fiyat sozlugu. CoinGecko sembolu buyuk harf doner.
-        Map<String, BigDecimal> priceBySymbol = new HashMap<>();
+        // CoinGecko id -> piyasa verisi.
+        //
+        // Eslestirme SEMBOL ile degil ID ile yapiliyor. Sebebi somut: Toncoin
+        // yeniden markalandi ve CoinGecko ayni id (the-open-network) icin artik
+        // GRAM sembolunu donduruyor. Sembolle eslestiren eski kod bu satiri
+        // sessizce "fiyat dondurmedi" diye atliyordu. Id'ler sabittir.
+        Map<String, CoinMarketResponse> byId = new HashMap<>();
         for (CoinMarketResponse m : markets) {
-            if (m.getSymbol() != null && m.getPrice() != null) {
-                priceBySymbol.put(m.getSymbol().toUpperCase(), m.getPrice());
+            if (m.getCoingeckoId() != null) {
+                byId.put(m.getCoingeckoId(), m);
             }
         }
 
+        // Ikon adreslerini coins tablosuna yaz.
+        // CoinGecko ikonu zaten yanitin icinde geliyordu ama kaydedilmiyordu;
+        // arayuz de elle cizilmis SVG'lere dusuyordu. Artik gercek logolar
+        // gosterilebiliyor.
+        //
+        // Yalnizca DEGISEN satirlari kaydediyoruz: aksi halde her 5 dakikada
+        // bir 100 gereksiz UPDATE calisirdi.
+        List<Coin> iconGuncellenecek = new ArrayList<>();
+        for (Coin coin : coins) {
+            CoinMarketResponse m = byId.get(coin.getCoingeckoId());
+            String yeni = m == null ? null : m.getIconUrl();
+            if (yeni != null && !yeni.isBlank() && !yeni.equals(coin.getIconUrl())) {
+                coin.setIconUrl(yeni);
+                iconGuncellenecek.add(coin);
+            }
+        }
+        if (!iconGuncellenecek.isEmpty()) {
+            coinRepository.saveAll(iconGuncellenecek);
+            log.info("{} coin icin ikon adresi guncellendi", iconGuncellenecek.size());
+        }
+
+        int basarili = 0;
         for (Coin coin : coins) {
             String symbol = coin.getSymbol();
-            BigDecimal price = priceBySymbol.get(symbol.toUpperCase());
+            CoinMarketResponse m = byId.get(coin.getCoingeckoId());
+            BigDecimal price = m == null ? null : m.getPrice();
 
             if (price == null) {
-                log.warn("CoinGecko {} icin fiyat dondurmedi, atlandi", symbol);
+                log.warn("CoinGecko {} ({}) icin fiyat dondurmedi, atlandi",
+                        symbol, coin.getCoingeckoId());
                 continue;
             }
+            basarili++;
 
             // getPrice()'in onbellegini doldur — PortfolioService bu sayede
             // portfoy sorgusunda HTTP istegi atmaz, Redis'ten okur.
@@ -130,7 +165,33 @@ public class MarketScheduler {
             log.info("Price refreshed for: {} = {}", symbol, price);
         }
 
-        log.info("Scheduled price refresh completed ({} coin, 1 HTTP istegi)", priceBySymbol.size());
+        log.info("Scheduled price refresh completed ({}/{} coin, 2 HTTP istegi)", basarili, coins.size());
+    }
+
+    // "Canli Fiyatlar" panelinin verisi: izleme listesindeki coinler,
+    // 7 gunluk grafikleriyle. /api/v1/market ucu bu onbellegi okur.
+    private void refreshWatchlistPanel() {
+        List<String> watchlistIds = coinRepository.findByIsFreeTierWatchlistTrue().stream()
+                .map(Coin::getCoingeckoId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
+
+        if (watchlistIds.isEmpty()) {
+            log.warn("Izleme listesinde coin yok, panel verisi guncellenmedi");
+            return;
+        }
+
+        try {
+            List<CoinMarketResponse> panel = coinGeckoService.fetchMarkets(watchlistIds, true);
+            if (!panel.isEmpty()) {
+                coinGeckoService.cacheMarkets(watchlistIds, panel);
+            }
+        } catch (Exception e) {
+            // Panel guncellenemezse onbellekteki son veri kalir.
+            log.warn("Panel verisi guncellenemedi: {}", e.getMessage());
+        }
     }
 
     // Her saatin basinda calisir — tum portfolylerin anlık degerini DB'ye kaydeder

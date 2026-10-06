@@ -99,19 +99,27 @@ public class CoinGeckoService {
     @Cacheable(value = "markets", key = "#ids.toString()")
     public List<CoinMarketResponse> getMarkets(List<String> ids) {
         // Onbellekte yoksa buraya dusulur ve gercek istek atilir.
-        return fetchMarkets(ids);
+        // Panel icin cagriliyor, grafik gerekli.
+        return fetchMarkets(ids, true);
     }
 
     // Onbellege BAKMADAN dogrudan CoinGecko'ya gider.
     // Scheduler bunu kullanir: amaci zaten onbellegi tazelemek oldugu icin
     // onbellekten okumasi anlamsiz olurdu.
+    //
+    // withSparkline: 7 gunluk fiyat egrisi istenip istenmedigi.
+    // Sparkline coin basina 168 nokta getiriyor; 100 coin icin bu, yalnizca
+    // 5 coin gosteren bir panel ugruna indirilen onemli bir veri yuku.
+    // Scheduler fiyatlari tazelerken false, panel verisini cekerken true
+    // geciyor.
     @SuppressWarnings("unchecked")
-    public List<CoinMarketResponse> fetchMarkets(List<String> ids) {
-        log.info("CoinGecko markets API called for: {}", ids);
+    public List<CoinMarketResponse> fetchMarkets(List<String> ids, boolean withSparkline) {
+        log.info("CoinGecko markets API called for {} coin (sparkline={})", ids.size(), withSparkline);
 
         String url = "https://api.coingecko.com/api/v3/coins/markets"
                 + "?vs_currency=usd&ids=" + String.join(",", ids)
-                + "&order=market_cap_desc&sparkline=true&price_change_percentage=24h";
+                + "&order=market_cap_desc&price_change_percentage=24h"
+                + "&sparkline=" + withSparkline;
 
         List<Map<String, Object>> response = restClient.get()
                 .uri(url)
@@ -125,6 +133,7 @@ public class CoinGeckoService {
 
         for (Map<String, Object> item : response) {
             CoinMarketResponse coin = new CoinMarketResponse();
+            coin.setCoingeckoId(item.get("id") == null ? null : String.valueOf(item.get("id")));
             coin.setSymbol(String.valueOf(item.get("symbol")).toUpperCase());
             coin.setName(String.valueOf(item.get("name")));
             coin.setPrice(toBigDecimal(item.get("current_price")));

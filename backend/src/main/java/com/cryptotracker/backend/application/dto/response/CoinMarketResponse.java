@@ -18,6 +18,10 @@ import java.util.List;
 @AllArgsConstructor
 public class CoinMarketResponse implements Serializable {
 
+    // CoinGecko'nun kendi id'si. Eslestirme SEMBOL yerine bununla yapilir:
+    // semboller degisebiliyor (Toncoin -> Gram ornegi), id'ler sabit.
+    private String coingeckoId;
+
     private String symbol;              // BTC
     private String name;                // Bitcoin
     private BigDecimal price;           // anlik fiyat (USD)
