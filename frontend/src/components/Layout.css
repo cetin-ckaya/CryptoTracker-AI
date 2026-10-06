@@ -6,7 +6,18 @@
   --statusbar-h: 36px;
 }
 
+/* TUM arayuzu orantili kucultur — tarayicinin %80 zoom'uyla ayni etki.
+   Boylece yazilar, ikonlar, kartlar, grafikler ve sidebar birlikte kucultur
+   ve dashboard kaydirmadan tek ekrana sigar.
+
+   Neden tek tek padding/yukseklik kismadik: oyle yapinca grafik ve donut
+   ezilirken yazilar ve sidebar ayni boyutta kaliyor, orantilar bozuluyordu.
+
+   zoom, transform: scale()'den farkli olarak YERLESIMI de olceklendirir;
+   scale sadece gorsel olarak kuculur, kapladigi yer degismez ve sayfanin
+   sagi altinda bosluk kalirdi. */
 .layout {
+  zoom: var(--ui-scale, 0.77);
   min-height: 100vh;
   background: #0b0e1a;
   padding-top: var(--topbar-h);
